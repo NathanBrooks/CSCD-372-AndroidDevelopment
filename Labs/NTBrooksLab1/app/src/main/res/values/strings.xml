@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">NTBrooksLab1</string>
+
+    <string name="TileScreenTitle">One Question Survey</string>
+    <string name="SurveyButton">Take Survey</string>
+    <string name="WebsiteButton">Goto Website</string>
+    <string name="SurveyQuestion">How Old Are You?</string>
+    <string name="SurveyLabel">Age:</string>
+    <string name="NameLabel">First Name:</string>
+    <string name="SubmitButton">SUBMIT</string>
+    <string name="ActionAbout">About</string>
+    <string name="title_activity_survey">SurveyActivity</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+</resources>

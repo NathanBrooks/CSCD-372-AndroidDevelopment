@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="top_cview"/>
+    <item type="id" name="bleft_cview"/>
+    <item type="id" name="bcenter_cview"/>
+    <item type="id" name="bright_cview"/>
+</resources>

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NTBrooksLab4</string>
+    <string name="action_about">About</string>
+    <string name="incButton">+1</string>
+</resources>

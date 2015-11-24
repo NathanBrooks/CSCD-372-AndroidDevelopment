@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">NTBrooksLab3</string>
+    <string name="action_settings">About</string>
+    <string name="drawer_image_desc">entry_icon</string>
+    <string name="drawer_open_desc">drawer_open_desc</string>
+    <string name="drawer_closed_desc">drawer_closed_desc</string>
+</resources>
