@@ -1,12 +1,9 @@
 package com.labs.nathan.ashmanproject;
 
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
-import android.graphics.Rect;
 import android.os.Bundle;
-import android.view.View;
 
 import java.util.Random;
 
@@ -42,7 +39,25 @@ public class Entity {
         y = 0;
         direction = 0;
         step = 0;
-        paint = new Paint(this.color);
+        paint = new Paint();
+        paint.setColor(color);
+    }
+
+    public Entity(int direction, int color, PlayingField parent) {
+        this.direction = direction;
+        step = 0;
+        this.color = color;
+        paint = new Paint();
+        paint.setColor(color);
+
+        Random rand = new Random();
+        this.x = rand.nextInt(14);
+        this.y = rand.nextInt(14);
+
+        while(parent.getMap(this.x, this.y) == 0) {
+            this.x = rand.nextInt(14);
+            this.y = rand.nextInt(14);
+        }
     }
 
     public Entity(int x, int y, int direction, int color) {
@@ -78,60 +93,48 @@ public class Entity {
 
     /* interaction methods */
 
+    public int getDirection() {
+        return direction;
+    }
+
     public void setDirection(int direction) {
         this.direction = direction;
     }
 
-
-    public Point prepareUpdate() {
-
-        Point nextPoint = new Point(x,y);
-
-        if(step == 0) {
-            switch (direction) {
-                case 0:
-                    nextPoint.y++;
-                    break;
-                case 1:
-                    nextPoint.x++;
-                    break;
-                case 2:
-                    nextPoint.x--;
-                    break;
-                case 3:
-                    nextPoint.y--;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        return nextPoint;
+    public float getCanvasX() {
+        return this.x_canvas;
     }
 
-    public void update(Point updatePoint, View parent) {
-        step = 0; // only do single steps for now
-        if(step == 0) {
-            int old_x = this.x;
-            int old_y = this.y;
+    public float getCanvasY() {
+        return this.y_canvas;
+    }
 
-            this.x = updatePoint.x;
-            this.y = updatePoint.y;
+    public Point getPos() {
+        return new Point(this.x, this.y);
+    }
 
-            parent.invalidate(new Rect(old_x, old_y, this.x+1, this.y+1));
-        } else {
-            /* TODO: handle animation */
-        }
+    public void setPos(int x, int y) {
+        step = 0;
+        this.x = x;
+        this.y = y;
+    }
+
+    public int getStep() {
+        return step;
+    }
+
+    public void update(PlayingField parent) {
+        step = 0; // default setting
+        // step++; uncomment later
     }
 
     /* drawing methods */
 
     public void onDraw(Canvas canvas) {
-        if(step == 0){
+        if(step == 0) {
             x_canvas = x;
             y_canvas = y;
-            canvas.drawCircle(x_canvas + .5f, y_canvas + .5f, .2f, paint);
+            canvas.drawCircle(x_canvas + .5f, y_canvas + .5f, .4f, paint);
         }
-        /* todo Draw entitiy */
     }
 }

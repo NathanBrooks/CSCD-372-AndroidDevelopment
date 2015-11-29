@@ -4,11 +4,16 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
+
+import java.util.Random;
 
 /**
  * Created by Nathan on 11/9/2015.
@@ -24,52 +29,90 @@ public class PlayingField extends View {
     private int change_height = 14;
     /* drawing colors */
     private final Paint paint = new Paint();
-
-
     private final int cBackground = Color.rgb(24,101,168);
     private final int cAshMan = Color.rgb(29,168,24);
-    private final int cGhost = Color.rgb(168,91,24);
-    private final int cCake = Color.rgb(163,24,168);
+    private final int cCake = Color.rgb(102,255,102);
     private final int cWall = Color.rgb(0,0,0);
 
+    /* entities */
+    private AshMan player;
+    private Ghost [] ghosts;
+
+    /* logic handlers */
+    private Handler clockHandler;
+    private Runnable clockTimer;
 
 
-    /* TODO: new map, this is the one in the example */
-    private int[] gameField = {2,2,2,0,0,0,0,2,0,0,0,0,0,0,
-                               2,0,2,0,2,2,2,2,0,2,2,2,2,2,
-                               2,0,2,0,2,0,0,2,2,2,2,0,2,2,
-                               2,0,2,0,2,2,0,0,0,0,2,0,2,2,
-                               2,0,2,2,2,0,0,2,2,2,2,0,2,2,
-                               2,0,0,0,2,2,0,2,2,2,2,0,0,2,
-                               2,2,2,0,2,2,2,2,0,2,2,2,2,2,
-                               0,0,2,0,2,2,2,0,0,0,2,0,0,2,
-                               2,2,2,0,2,2,2,2,0,2,2,0,2,2,
-                               2,0,2,0,2,0,0,2,0,2,0,2,2,2,
-                               2,0,2,0,2,0,0,2,2,2,0,2,0,0,
-                               2,0,2,2,2,2,0,2,0,0,0,2,0,2,
-                               2,0,2,2,2,2,0,2,2,2,2,2,0,2,
-                               2,0,0,2,2,2,2,2,0,0,2,2,2,2};
+    private final int[] initGameField = {2,2,2,0,0,0,0,2,0,0,0,0,0,0,
+                                         2,0,2,0,2,2,2,2,0,2,2,2,2,2,
+                                         2,0,2,0,2,0,0,2,2,2,2,0,2,2,
+                                         2,0,2,0,2,2,0,0,0,0,2,0,2,2,
+                                         2,0,2,2,2,0,0,2,2,2,2,0,2,2,
+                                         2,0,0,0,2,2,0,2,2,2,2,0,0,2,
+                                         2,2,2,0,2,2,2,2,0,2,2,2,2,2,
+                                         0,0,2,0,2,2,2,0,0,0,2,0,0,2,
+                                         2,2,2,0,2,2,2,2,0,2,2,0,2,2,
+                                         2,0,2,0,2,0,0,2,0,2,0,2,2,2,
+                                         2,0,2,0,2,0,0,2,2,2,0,2,0,0,
+                                         2,0,2,2,2,2,0,2,0,0,0,2,0,2,
+                                         2,0,2,2,2,2,0,2,2,2,2,2,0,2,
+                                         2,0,0,2,2,2,2,2,0,0,2,2,2,2};
+
+    private int[] gameField;
+
+    public Point sizes = new Point(14,14);
 
     /* constructors */
 
     public PlayingField(Context context) {
         super(context);
-        Log.d("PlayingField", "base field constructor called");
-        setLayerType(View.LAYER_TYPE_SOFTWARE, null); // turn off hardware acceleration
-        paint.setStyle(Paint.Style.FILL);
+        init(context);
     }
 
     public PlayingField(Context context, AttributeSet attrs) {
         super(context, attrs);
+        init(context);
     }
 
     public PlayingField(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        init(context);
+    }
+
+    private void init(Context context) {
+        setLayerType(View.LAYER_TYPE_SOFTWARE, null); // turn off hardware acceleration
+        paint.setStyle(Paint.Style.FILL);
+
+        gameField = initGameField;
+
+        player = new AshMan();
+
+        Random rand = new Random(System.currentTimeMillis());
+        ghosts = new Ghost[5];
+        for(int i=0; i<ghosts.length; i++) {
+            Log.d("PlayingField init", "new ghost");
+            //ghosts[i] = new Ghost(Color.rgb(rand.nextInt(255),rand.nextInt(255),rand.nextInt(255)), this);
+            ghosts[i] = new Ghost(Color.rgb(255,0,0), this);
+        }
+
+
+        clockHandler = new Handler();
+
+        clockTimer = new Runnable() {
+            @Override
+            public void run() {
+                update();
+                clockHandler.postDelayed(this, 500);
+            }
+        };
+
+        clockHandler.postDelayed(clockTimer, 500);
+
     }
 
     /* maths */
 
-    private int getMap(int x, int y) {
+    public int getMap(int x, int y) {
         return gameField[x + (y * field_x)];
     }
 
@@ -81,7 +124,7 @@ public class PlayingField extends View {
     /* game interaction commands */
 
     public void setJoystickDirection(int direction) {
-        /* TODO: set AshMan's direction to passed in direction */
+        player.setDirection(direction);
     }
 
     public void pauseGame() {
@@ -148,6 +191,32 @@ public class PlayingField extends View {
         }
     }
 
+    private void checkPlayerInteractions() {
+        Point player_pos = player.getPos();
+        setMap(player_pos.x, player_pos.y, 1);
+    }
+
+    private boolean checkLevelComplete() {
+        for(int i=0; i<sizes.y; i++) {
+            for(int j=0; j<sizes.x; j++) {
+                if(getMap(j,i) == 2) return false; // level is not over
+            }
+        }
+        return true; // level is over
+    }
+
+    private void update() {
+        player.update(this);
+        for(int i=0; i<ghosts.length; i++) {
+            ghosts[i].update(this);
+        }
+        checkPlayerInteractions();
+        if(checkLevelComplete()) {
+            Toast.makeText(getContext(), "LEVEL COMPLETE", Toast.LENGTH_LONG).show();
+        }
+        invalidate();
+    }
+
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -172,6 +241,12 @@ public class PlayingField extends View {
                         break;
                 }
             }
+        }
+
+        /* draw player */
+        player.onDraw(canvas);
+        for(int i=0; i<ghosts.length; i++) {
+            ghosts[i].onDraw(canvas);
         }
 
 

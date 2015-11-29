@@ -1,5 +1,7 @@
 package com.labs.nathan.ntbrookslab8;
 
+import com.dropbox.chooser.android.DbxChooser;
+
 import android.content.res.AssetManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -13,7 +15,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-public class Activity1 extends AppCompatActivity implements ExpandableListView.OnChildClickListener {
+public class Activity1 extends AppCompatActivity implements ExpandableListView.OnChildClickListener,
+                                                            View.OnClickListener {
+
+    static final String APP_KEY = "esh1djgrmeefo9e";
+
+    private DbxChooser mChooser;
 
     ArrayList<String> Make;
     ArrayList<ArrayList<String>> AllModels;
@@ -25,6 +32,8 @@ public class Activity1 extends AppCompatActivity implements ExpandableListView.O
         setContentView(R.layout.activity_expandable_list_view);
         Make = new ArrayList<>();
         AllModels = new ArrayList<>();
+
+
         if(savedInstanceState == null) {
             if (!parseFile("MakeModelList.txt")) {
                 Toast.makeText(getApplicationContext(), "List Failed to Parse", Toast.LENGTH_LONG).show();
@@ -42,6 +51,11 @@ public class Activity1 extends AppCompatActivity implements ExpandableListView.O
             myListView.setOnChildClickListener(this);
             myListView.setAdapter(myAdapter);
         }
+    }
+
+    @Override
+    public void onClick(View v) {
+
     }
 
     @Override
