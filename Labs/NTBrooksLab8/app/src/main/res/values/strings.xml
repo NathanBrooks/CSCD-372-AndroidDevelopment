@@ -1,8 +1,0 @@
-<resources>
-    <string name="app_name">NTBrooksLab8</string>
-
-    <string name="hello_world">Hello world!</string>
-    <string name="action_about">About</string>
-    <string name="image_description">delete</string>
-    <string name="placeholder">placeholder</string>
-</resources>

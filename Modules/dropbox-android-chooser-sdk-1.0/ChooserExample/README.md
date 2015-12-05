@@ -1,2 +1,0 @@
-chooser-android-example
-=======================
