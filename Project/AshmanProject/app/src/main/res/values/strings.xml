@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Ashman Project</string>
+    <string name="app_name">ntbrooksProjectAshMan</string>
     <string name="action_about">About</string>
     <string name="action_reset">Reset Game</string>
     <string name="action_cheat">Cheat Game</string>
