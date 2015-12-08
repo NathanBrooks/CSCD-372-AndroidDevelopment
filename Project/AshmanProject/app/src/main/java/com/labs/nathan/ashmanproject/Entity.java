@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.os.Bundle;
+import android.util.Log;
 
 import java.util.Random;
 
@@ -54,15 +55,20 @@ public class Entity {
         this.x = rand.nextInt(14);
         this.y = rand.nextInt(14);
 
-        while(parent.getMap(this.x, this.y) == 0) {
+        while(parent.getMap(this.x, this.y) == 0 || (this.x == 5 && this.y == 8)) { // cant let them spawn on you haha
             this.x = rand.nextInt(14);
             this.y = rand.nextInt(14);
         }
+
+        this.x_canvas = x;
+        this.y_canvas = y;
     }
 
     public Entity(int x, int y, int direction, int color) {
         this.x = x;
         this.y = y;
+        this.x_canvas = x;
+        this.y_canvas = y;
         this.direction = direction;
         this.color = color;
 
@@ -98,7 +104,15 @@ public class Entity {
     }
 
     public void setDirection(int direction) {
-        this.direction = direction;
+        if(direction != -1) {
+            if (direction != this.direction) {
+                Log.d("setDirection", "direction is different");
+                step = 1;
+            }
+            this.x_canvas = x;
+            this.y_canvas = y;
+            this.direction = direction;
+        }
     }
 
     public float getCanvasX() {
@@ -108,6 +122,10 @@ public class Entity {
     public float getCanvasY() {
         return this.y_canvas;
     }
+
+    public void setCanvasX (float x) { this.x_canvas = x; }
+
+    public void setCanvasY (float y) { this.y_canvas = y; }
 
     public Point getPos() {
         return new Point(this.x, this.y);
@@ -123,18 +141,20 @@ public class Entity {
         return step;
     }
 
+    public void resetStep() { step = 0; }
+
     public void update(PlayingField parent) {
-        step = 0; // default setting
-        // step++; uncomment later
+        step++;
     }
 
     /* drawing methods */
 
     public void onDraw(Canvas canvas) {
-        if(step == 0) {
+        if(step == 1) {
             x_canvas = x;
             y_canvas = y;
-            canvas.drawCircle(x_canvas + .5f, y_canvas + .5f, .4f, paint);
         }
+
+        canvas.drawCircle(x_canvas + .5f, y_canvas + .5f, .4f, paint);
     }
 }

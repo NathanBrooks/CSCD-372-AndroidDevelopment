@@ -9,11 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Parcelable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
-
-import java.util.Random;
 
 /**
  * Created by Nathan on 11/9/2015.
@@ -27,10 +23,10 @@ public class PlayingField extends View {
     private final float aspect_ratio = width/height;
     private int change_width = 14;
     private int change_height = 14;
+
     /* drawing colors */
     private final Paint paint = new Paint();
     private final int cBackground = Color.rgb(24,101,168);
-    private final int cAshMan = Color.rgb(29,168,24);
     private final int cCake = Color.rgb(102,255,102);
     private final int cWall = Color.rgb(0,0,0);
 
@@ -39,8 +35,21 @@ public class PlayingField extends View {
     private Ghost [] ghosts;
 
     /* logic handlers */
+    private final int timerHitRate = 25;
     private Handler clockHandler;
     private Runnable clockTimer;
+
+    /* game handlers */
+    private boolean isPaused;
+    private int gameLevel;
+    private int cakesLeft;
+    private boolean gameOver;
+    private boolean gameKilled;
+
+
+    /* callbacks */
+    OnGameUpdate gameCallback;
+
 
 
     private final int[] initGameField = {2,2,2,0,0,0,0,2,0,0,0,0,0,0,
@@ -51,7 +60,7 @@ public class PlayingField extends View {
                                          2,0,0,0,2,2,0,2,2,2,2,0,0,2,
                                          2,2,2,0,2,2,2,2,0,2,2,2,2,2,
                                          0,0,2,0,2,2,2,0,0,0,2,0,0,2,
-                                         2,2,2,0,2,2,2,2,0,2,2,0,2,2,
+                                         2,2,2,0,2,1,2,2,0,2,2,0,2,2,
                                          2,0,2,0,2,0,0,2,0,2,0,2,2,2,
                                          2,0,2,0,2,0,0,2,2,2,0,2,0,0,
                                          2,0,2,2,2,2,0,2,0,0,0,2,0,2,
@@ -66,35 +75,46 @@ public class PlayingField extends View {
 
     public PlayingField(Context context) {
         super(context);
-        init(context);
+        init();
+        clockHandler.postDelayed(clockTimer, timerHitRate);
     }
 
     public PlayingField(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init(context);
+        init();
+        clockHandler.postDelayed(clockTimer, timerHitRate);
     }
 
     public PlayingField(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
-        init(context);
+        init();
+        clockHandler.postDelayed(clockTimer, timerHitRate);
     }
 
-    private void init(Context context) {
+    private void init() {
         setLayerType(View.LAYER_TYPE_SOFTWARE, null); // turn off hardware acceleration
         paint.setStyle(Paint.Style.FILL);
 
-        gameField = initGameField;
+        gameField = initGameField.clone();
 
         player = new AshMan();
 
-        Random rand = new Random(System.currentTimeMillis());
         ghosts = new Ghost[5];
         for(int i=0; i<ghosts.length; i++) {
-            Log.d("PlayingField init", "new ghost");
-            //ghosts[i] = new Ghost(Color.rgb(rand.nextInt(255),rand.nextInt(255),rand.nextInt(255)), this);
             ghosts[i] = new Ghost(Color.rgb(255,0,0), this);
         }
 
+        isPaused = false;
+        gameLevel = 1;
+        cakesLeft = 0;
+        gameOver = false;
+        gameKilled = false;
+
+        for(int i=0; i<field_y; i++){
+            for(int j=0; j<field_y; j++) {
+                if(getMap(i,j) == 2) cakesLeft++;
+            }
+        }
 
         clockHandler = new Handler();
 
@@ -102,11 +122,11 @@ public class PlayingField extends View {
             @Override
             public void run() {
                 update();
-                clockHandler.postDelayed(this, 500);
+                if(!gameKilled)
+                    clockHandler.postDelayed(this, timerHitRate);
             }
-        };
 
-        clockHandler.postDelayed(clockTimer, 500);
+        };
 
     }
 
@@ -128,35 +148,109 @@ public class PlayingField extends View {
     }
 
     public void pauseGame() {
-        /* TODO: stop game timers */
+        clockHandler.removeCallbacksAndMessages(null);
+        if(!gameKilled)
+            isPaused = true;
+        invalidate();
     }
 
     public void resumeGame() {
-        /* TODO: resume game timers */
+        if(!gameOver) {
+            clockHandler.postDelayed(clockTimer, timerHitRate);
+            isPaused = false;
+            invalidate();
+        }
     }
 
-    public boolean isGameOver() {
-        /* TODO: detect when game has ended */
-        return false;
+    public void killScreen() {
+        clockHandler.postDelayed(clockTimer, timerHitRate);
+        gameKilled = true;
+        invalidate();
+    }
+
+    public void resetGame() {
+        pauseGame(); // kill current timer
+        init();
+        pauseGame(); // need to call again to reforce all pause vars
+    }
+
+    public void startNextLevel() {
+        pauseGame(); // kill current timer
+        init();
+        pauseGame(); // need to call again to reforce pause vars
+
+        gameLevel = 2; // update the game level
+
+        for(Ghost ghost : ghosts) {
+            ghost.setCurrentLevel(gameLevel); // change the ghost speed
+        }
+
+        if(this.gameCallback !=  null)
+            this.gameCallback.onGameUpdate(gameLevel, cakesLeft, true, false, false); // alert the parent
+            this.gameCallback.onGameSoundRequest(false, true, false, false);
+    }
+
+    public void gameWin() {
+        gameOver = true;
+        clockHandler.removeCallbacksAndMessages(null);
+        if(this.gameCallback != null)
+            this.gameCallback.onGameUpdate(gameLevel, cakesLeft, false, true, false); // alert the parent
+            this.gameCallback.onGameSoundRequest(false, false, false, true);
+    }
+
+    public void cheat() {
+        pauseGame();
+        if(gameLevel == 1)
+            startNextLevel();
+        else
+            gameWin();
+    }
+
+    public boolean isGamePaused() {
+        return new Boolean(isPaused);
     }
 
     /* instance commands */
 
+    public void setOnGameUpdate(OnGameUpdate callback) {
+        gameCallback = callback;
+    }
+
     @Override
     protected Parcelable onSaveInstanceState() {
-        /* TODO: save current state of the game */
-        /* NOTE: Each entity should create its own bundle to be stored*/
+        pauseGame();
+
         Bundle saveBundle = new Bundle();
+        /* local saved stuff */
         saveBundle.putIntArray("map_state", gameField);
+
+        saveBundle.putBoolean("gameOver", gameOver);
+        saveBundle.putInt("level", gameLevel);
+        saveBundle.putInt("cakes", cakesLeft);
+
+        saveBundle.putBundle("player", player.getInstanceBundle());
+        for(int i=0; i<ghosts.length; i++) {
+            saveBundle.putBundle("ghost" + i, ghosts[i].getInstanceBundle());
+        }
         saveBundle.putParcelable("instance_state", super.onSaveInstanceState());
         return saveBundle;
     }
 
     protected void onRestoreInstanceState(Parcelable incomingState) {
         if(incomingState != null) {
-            /* TODO: return state of the game */
             Bundle savedState = (Bundle)incomingState;
             gameField = savedState.getIntArray("map_state");
+            pauseGame();
+
+            gameOver = savedState.getBoolean("gameOver");
+            gameLevel = savedState.getInt("level");
+            cakesLeft = savedState.getInt("cakes");
+
+            player.setInstanceBundle(savedState.getBundle("player"));
+            for(int i=0; i<ghosts.length; i++){
+                ghosts[i].setInstanceBundle(savedState.getBundle("ghost"+i));
+                ghosts[i].setCurrentLevel(gameLevel);
+            }
             super.onRestoreInstanceState(savedState.getParcelable("instance_state"));
         } else {
             super.onRestoreInstanceState(incomingState);
@@ -180,29 +274,43 @@ public class PlayingField extends View {
         int newWidth = (int)(allocatedHeight * aspect_ratio);
         int newHeight = (int)(allocatedWidth / aspect_ratio);
 
-        Log.d("onMeasure allocated", "width: " + allocatedWidth + " height: " + allocatedHeight + " aspect_ratio: " + aspect_ratio);
-
         if(newHeight > allocatedHeight) {
-            Log.d("onMeasure", "newWidth: " + newWidth + " allocatedHeight: " + allocatedHeight);
             setMeasuredDimension(newWidth, allocatedHeight);
         } else {
-            Log.d("onMeasure", "allocatedWidth: " + allocatedWidth + " newHeight: " + newHeight);
             setMeasuredDimension(allocatedWidth, newHeight);
         }
     }
 
     private void checkPlayerInteractions() {
-        Point player_pos = player.getPos();
-        setMap(player_pos.x, player_pos.y, 1);
-    }
+        if(player.playerIsDead()) {
+            if(!gameOver) {
+                for (Ghost ghost : ghosts) {
+                    ghost.stop();
+                }
 
-    private boolean checkLevelComplete() {
-        for(int i=0; i<sizes.y; i++) {
-            for(int j=0; j<sizes.x; j++) {
-                if(getMap(j,i) == 2) return false; // level is not over
+                if(this.gameCallback != null)
+                    this.gameCallback.onGameSoundRequest(false, false, true, false);
+
             }
+
+            if(player.DeathAnimationSteps() == 0) {
+                if(this.gameCallback != null && !gameKilled) {
+                    this.gameCallback.onGameUpdate(gameLevel, cakesLeft, false, false, true);
+                }
+                killScreen();
+            }
+            gameOver = true; // done last because we handled the rest of ending the game
+        } else {
+            Point player_pos = player.getPos();
+
+            for(Ghost ghost : ghosts) {
+                if(player_pos.equals(ghost.getPos()))
+                    player.killPlayer();
+            }
+
+            setMap(player_pos.x, player_pos.y, 1);
         }
-        return true; // level is over
+
     }
 
     private void update() {
@@ -210,11 +318,8 @@ public class PlayingField extends View {
         for(int i=0; i<ghosts.length; i++) {
             ghosts[i].update(this);
         }
+
         checkPlayerInteractions();
-        if(checkLevelComplete()) {
-            Toast.makeText(getContext(), "LEVEL COMPLETE", Toast.LENGTH_LONG).show();
-        }
-        invalidate();
     }
 
     @Override
@@ -224,6 +329,8 @@ public class PlayingField extends View {
 
         canvas.scale(change_width / width, change_height/height);
         canvas.drawColor(cBackground); // color the background
+
+        int tmpCakesLeft = 0;
 
         /* draw map */
         for(int i=0; i<field_x; i++) {
@@ -236,6 +343,7 @@ public class PlayingField extends View {
                     case 2: // cake
                         paint.setColor(cCake);
                         canvas.drawCircle(i+.5f, j+.5f, .2f, paint);
+                        tmpCakesLeft++;
                         break;
                     default: // empty
                         break;
@@ -243,10 +351,48 @@ public class PlayingField extends View {
             }
         }
 
+        if(tmpCakesLeft != cakesLeft && this.gameCallback != null && !player.playerIsDead()) {
+            this.gameCallback.onGameSoundRequest(true, false, false, false);
+        }
+
+        cakesLeft = tmpCakesLeft;
+
+        if(cakesLeft != 0) { // this is here because I don't want to deal with killing the thread within itself #lazy
+            if (this.gameCallback != null) {
+                this.gameCallback.onGameUpdate(gameLevel, cakesLeft, false, false, false);
+            }
+        } else {
+            if (gameLevel == 1)
+                startNextLevel();
+            else
+                gameWin();
+        }
+
         /* draw player */
         player.onDraw(canvas);
+
+        /* draw ghosts */
         for(int i=0; i<ghosts.length; i++) {
             ghosts[i].onDraw(canvas);
+        }
+
+        if(isPaused) { // display the paused screen
+            paint.setColor(Color.rgb(0,0, 0));
+            paint.setAlpha(127);
+            canvas.drawPaint(paint);
+            paint.setColor(Color.rgb(255,255,255));
+            paint.setTextSize(3);
+            paint.setAlpha(255);
+            canvas.drawText("Paused", 0, field_y/2, paint);
+        } else if (gameKilled) {
+            paint.setColor(Color.rgb(0,0, 0));
+            paint.setAlpha(127);
+            canvas.drawPaint(paint);
+            paint.setColor(Color.rgb(255,255,255));
+            paint.setTextSize(2);
+            paint.setAlpha(255);
+            canvas.drawText("Game Over", 0, field_y/2, paint);
+
         }
 
 
